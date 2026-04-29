@@ -1,0 +1,200 @@
+# smoke-ui-boundary-0429 — Alışkanlık Takip Uygulaması PRD
+
+## 1. Genel Bakış
+
+smoke-ui-boundary-0429, günlük alışkanlıklarını takip etmek isteyen kullanıcılar için geliştirilmiş basit, hızlı ve tarayıcı tabanlı bir uygulamadır. Kullanıcılar alışkanlık ekleyebilir, tamamladıklarını işaretleyebilir, günlük filtreleme yapabilir ve istatistiklerini görebilir. Uygulama tamamen Türkçe arayüz ile çalışır, herhangi bir kayıt/login gerektirmez ve veriler tarayıcının localStorage'ında kalıcı olarak saklanır.
+
+## 2. Hedefler
+
+1. Kullanıcıların 10 saniye içinde ilk alışkanlığını ekleyebilmesi
+2. Tüm butonların ve etkileşimli elemanların gerçek davranış üretmesi (sahte/dummy buton yok)
+3. Günlük filtreleme ile "bugün", "dün", "tümü" gibi hızlı görünümler sunulması
+4. İstatistik kartı ile tamamlanma oranı ve aktif alışkanlık sayısının anlık görülmesi
+5. localStorage kullanarak veri kaybı olmaması, tarayıcı kapandığında bile verinin kalması
+6. Mobil uyumlu tasarım ile telefondan ve masaüstünden eşit deneyim
+
+## 3. Tech Stack Detayı
+
+- **Framework:** React 18.3 (Functional Components + Hooks)
+- **Build:** Vite 5.x (HMR, fast build)
+- **Language:** TypeScript 5.x (strict mode)
+- **Styling:** Tailwind CSS 3.4 (utility-first)
+- **State Management:** React useState + useReducer (basitlik için Zustand/Redux gerekmez)
+- **Storage:** localStorage (veri kalıcılığı)
+- **Icons:** Lucide React (TÜM ikonlar buradan, asla emoji kullanılmaz)
+- **Lint/Format:** ESLint + Prettier
+
+## 4. Fonksiyonel Gereksinimler
+
+### 4.1 Alışkanlık Ekleme
+- Input alanı: Alışkanlık adı (zorunlu, min 1 karakter, max 100 karakter)
+- Ekle butonu: "Ekle" metni ile sağda veya altında
+- Enter tuşu ile de ekleme yapılabilir
+- Hata: "Alışkanlık adı boş bırakılamaz" (Türkçe)
+- Başarı: Input temizlenir, alışkanlık listenin en üstüne eklenir
+- Varsayılan durum: Tamamlanmamış (unchecked)
+
+### 4.2 Alışkanlık Tamamlama
+- Her alışkanlık satırında sol tarafta checkbox (Lucide CheckSquare veya özel styled checkbox)
+- Tıklanınca: Tamamlandı olarak işaretlenir, üstü çizilir (text-decoration: line-through)
+- Tekrar tıklanınca: Tamamlanmamış duruma döner
+- Durum değişimi anında localStorage güncellenir
+- Tarih bazlı: Her alışkanlığın her gün için ayrı tamamlanma durumu tutulur
+
+### 4.3 Günlük Filtreleme
+- Filtre buton grubu: "Bugün" (varsayılan), "Dün", "Tümü"
+- "Bugün": Sadece bugün eklenen/görünen alışkanlıklar
+- "Dün": Dünkü tamamlanma durumları gösterilir
+- "Tümü": Tüm alışkanlıklar, her günün durumu ayrı görülür
+- Aktif filtre vurgulu (primary renk), diğerleri muted
+
+### 4.4 İstatistik Kartı
+- Üstte sabit bir kart bileşeni
+- Gösterge 1: "Toplam Alışkanlık" — aktif alışkanlık sayısı
+- Gösterge 2: "Bugün Tamamlanan" — bugün check edilen sayı
+- Gösterge 3: "Tamamlanma Oranı" — yüzde (örn. %67)
+- Kart: Arka plan surface renk, border radius 12px, padding 16px
+
+### 4.5 Alışkanlık Silme
+- Her alışkanlık satırının sağında çöp kutusu ikonu (Lucide Trash2)
+- Tıklanınca anında silinir (bu basit app için confirmation modal gerekmez)
+- Silinen alışkanlık localStorage'dan da kaldırılır
+
+## 5. Veri Modeli
+
+### localStorage Schema (JSON)
+
+```typescript
+interface Habit {
+  id: string;           // UUID v4 (crypto.randomUUID)
+  name: string;         // Alışkanlık adı
+  createdAt: string;    // ISO 8601 tarih
+}
+
+interface CompletionRecord {
+  habitId: string;
+  date: string;         // YYYY-MM-DD format
+  completed: boolean;
+}
+
+interface AppState {
+  habits: Habit[];
+  completions: CompletionRecord[];
+  currentFilter: 'today' | 'yesterday' | 'all';
+}
+```
+
+- Storage Key: `smoke-ui-boundary-0429`
+- Başlangıç: localStorage boşsa `habits: []`, `completions: []`, `currentFilter: 'today'`
+- Date utility: `new Date().toISOString().split('T')[0]` ile YYYY-MM-DD üretilir
+
+## 6. UI/UX Gereksinimleri
+
+### 6.1 Design System Seçimi
+
+- **Aesthetic:** minimal
+- **Renk Paleti:**
+  - Primary: #2563EB (blue-600)
+  - Secondary: #475569 (slate-600)
+  - Background: #F8FAFC (slate-50)
+  - Surface: #FFFFFF (white)
+  - Text Primary: #0F172A (slate-900)
+  - Text Secondary: #64748B (slate-500)
+  - Border: #E2E8F0 (slate-200)
+  - Success: #10B981 (emerald-500)
+  - Error: #EF4444 (red-500)
+- **Tipografi:**
+  - Heading: Inter (600 weight)
+  - Body: Inter (400, 500 weight)
+  - Base size: 16px, scale: 14px, 16px, 18px, 24px, 32px
+- **Icon Library:** Lucide React (tüm ikonlar)
+
+### 6.2 Spacing & Components
+
+- Spacing Scale: 4, 8, 12, 16, 24, 32, 48 px
+- Border Radius: 8px (buton/input), 12px (kart), 9999px (yuvarlak etiketler)
+- Shadow: kart için `0 1px 3px rgba(0,0,0,0.1)`
+- Buton pattern: Primary (mavi arka plan, beyaz yazı), Secondary (beyaz arka plan, slate border)
+- Kart pattern: Beyaz arka plan, 12px radius, 1px border
+- Input pattern: Full width, 8px radius, 1px border, focus: 2px primary border
+
+## 7. Non-Functional Requirements
+
+### 7.1 Performans
+- İlk yükleme < 1.5 saniye (Vite + minimal bundle)
+- Sayfa geçişi yok (SPA tek ekran)
+- localStorage okuma/yazma < 50ms
+- Bundle size hedefi: < 200KB (gzipped)
+
+### 7.2 Erişilebilirlik (WCAG 2.1 AA)
+- Tüm checkbox'lar `aria-label` ile etiketlenmiş (örn. "Koşu alışkanlığını tamamla")
+- Filtre butonları `role="tab"` ve `aria-selected`
+- Input alanı `aria-describedby` ile hata mesajı bağlantılı
+- Klavye navigasyonu: Tab ile liste dolaşılabilir, Enter/Space ile toggle
+- Kontrast oranı: Metin >= 4.5:1 (slate-900 üstüne slate-50 = 12.6:1)
+- Focus ring: 2px primary rengi, tüm interaktif elemanlarda
+- Touch hedefleri: Butonlar min 44x44 px
+
+### 7.3 Tarayıcı Desteği
+- Chrome 90+, Firefox 88+, Safari 14+, Edge 90+
+- iOS Safari 14+, Android Chrome 90+
+- Responsive: 320px+ mobile → 1920px+ desktop
+- CSS Grid + Flexbox, esnek layout
+
+## 8. Proje Yapısı
+
+```
+src/
+├── components/
+│   ├── HabitList.tsx
+│   ├── HabitItem.tsx
+│   ├── AddHabitForm.tsx
+│   ├── StatsCard.tsx
+│   ├── FilterTabs.tsx
+│   └── EmptyState.tsx
+├── screens/
+│   └── AnaSayfa.tsx
+├── hooks/
+│   ├── useLocalStorage.ts
+│   └── useHabits.ts
+├── utils/
+│   └── dateHelpers.ts
+├── types/
+│   └── index.ts
+├── App.tsx
+└── main.tsx
+```
+
+## 9. Window State (testing/dogfood)
+
+```javascript
+window.app = {
+  state: 'idle',
+  habitCount: 0,
+  todayCompleted: 0,
+  currentFilter: 'today'
+}
+```
+
+- Sayfa yüklendiğinde `window.app.state = 'ready'`
+- localStorage yazma anında `window.app.state = 'persisting'`
+- Hata durumunda `window.app.state = 'error'`
+
+## 10. Ekranlar
+
+| # | Ekran Adı | Tür | Açıklama |
+|---|-----------|-----|----------|
+| 1 | Ana Sayfa | dashboard | Ana ekran: istatistik kartı, filtreler, alışkanlık listesi, ekleme formu |
+| 2 | Boş Durum | empty-state | Hiç alışkanlık yokken gösterilen ekran, "İlk alışkanlığınızı ekleyin" mesajı |
+| 3 | Hata Sınırı | error | Beklenmeyen hata durumunda gösterilen basit error boundary ekranı |
+
+Generate a SEPARATE screen design for EVERY page, view, modal, dialog, tab panel, and settings screen described in this PRD. Do NOT skip ANY screen — even if it seems minor.
+
+MANDATORY SCREENS:
+- If the PRD mentions "settings" or "ayarlar" → generate a Settings screen
+- If the PRD mentions tabs or bottom navigation → generate EACH tab view as a separate screen
+- If the PRD mentions modals (statistics, help, share, confirmation) → generate each as a separate screen
+- If the PRD mentions error states, empty states, loading states → generate those too
+- Generate at least as many screens as there are distinct views/pages/modals in the PRD
+
+All visible text must be in Turkish. Use a dark, modern theme.
